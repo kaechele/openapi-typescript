@@ -182,16 +182,17 @@ async function main() {
             lastFetch: new Date().getTime(),
           };
           upsert(contributors[repo], userData);
+          // write after every update (so failures are resumable)
+          fs.writeFileSync(
+            new URL("../data/contributors.json", import.meta.url),
+            JSON.stringify(contributors),
+          );
           console.log(`Updated old contributor data for ${username}`); // eslint-disable-line no-console
         } catch (err) {
           throw new Error(err);
         }
       }
     }),
-  );
-  fs.writeFileSync(
-    new URL("../data/contributors.json", import.meta.url),
-    JSON.stringify(contributors),
   );
 }
 

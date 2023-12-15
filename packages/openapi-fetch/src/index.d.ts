@@ -23,6 +23,8 @@ export interface ClientOptions extends Omit<RequestInit, "headers"> {
   querySerializer?: QuerySerializer<unknown>;
   /** global bodySerializer */
   bodySerializer?: BodySerializer<unknown>;
+  /** middlewares */
+  middleware?: Middleware[];
   headers?: HeadersOptions;
 }
 
@@ -69,8 +71,8 @@ export type ParamsOption<T> = T extends {
 export type RequestBodyOption<T> = OperationRequestBodyContent<T> extends never
   ? { body?: never }
   : undefined extends OperationRequestBodyContent<T>
-  ? { body?: OperationRequestBodyContent<T> }
-  : { body: OperationRequestBodyContent<T> };
+    ? { body?: OperationRequestBodyContent<T> }
+    : { body: OperationRequestBodyContent<T> };
 
 export type FetchOptions<T> = RequestOptions<T> & Omit<RequestInit, "body">;
 
@@ -104,6 +106,43 @@ export type RequestOptions<T> = ParamsOption<T> &
     parseAs?: ParseAs;
     fetch?: ClientOptions["fetch"];
   };
+
+export type MergedOptions<T = unknown> = {
+  baseUrl: string;
+  parseAs: ParseAs;
+  querySerializer: QuerySerializer<T>;
+  bodySerializer: BodySerializer<T>;
+  fetch: typeof globalThis.fetch;
+};
+
+export type MiddlewareRequestPayload = {
+  type: "request";
+  req: Request & {
+    /** The original OpenAPI schema path (including curly braces) */
+    schemaPath: string;
+    /** OpenAPI parameters as provided from openapi-fetch */
+    params: {
+      query?: Record<string, unknown>;
+      header?: Record<string, unknown>;
+      path?: Record<string, unknown>;
+      cookie?: Record<string, unknown>;
+    };
+  };
+  res?: never;
+  options: readonly MergedOptions;
+};
+export type MiddlewareResponsePayload = {
+  type: "response";
+  req?: never;
+  res: Response;
+  options: readonly MergedOptions;
+};
+export type MiddlewarePayload =
+  | MiddlewareRequestPayload
+  | MiddlewareResponsePayload;
+export type Middleware = (
+  payload: MiddlewarePayload,
+) => Promise<Request | Response | undefined> | Promise<void>;
 
 export default function createClient<Paths extends {}>(
   clientOptions?: ClientOptions,
