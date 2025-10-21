@@ -554,7 +554,7 @@ export function createQuerySerializer(options) {
  * @type {import("./index.js").defaultPathSerializer}
  * @see https://swagger.io/docs/specification/serialization/#path
  */
-export function defaultPathSerializer(pathname, pathParams) {
+export function defaultPathSerializer(pathname, pathParams, allowReserved = false) {
   let nextURL = pathname;
   for (const match of pathname.match(PATH_PARAM_RE) ?? []) {
     let name = match.substring(1, match.length - 1);
@@ -587,7 +587,7 @@ export function defaultPathSerializer(pathname, pathParams) {
       nextURL = nextURL.replace(match, `;${serializePrimitiveParam(name, value)}`);
       continue;
     }
-    nextURL = nextURL.replace(match, style === "label" ? `.${encodeURIComponent(value)}` : encodeURIComponent(value));
+    nextURL = nextURL.replace(match, style === "label" ? `.${allowReserved ? value : encodeURIComponent(value)}` : allowReserved ? value : encodeURIComponent(value));
   }
   return nextURL;
 }
@@ -619,7 +619,7 @@ export function defaultBodySerializer(body, headers) {
 export function createFinalURL(pathname, options) {
   let finalURL = `${options.baseUrl}${pathname}`;
   if (options.params?.path) {
-    finalURL = defaultPathSerializer(finalURL, options.params.path);
+    finalURL = defaultPathSerializer(finalURL, options.params.path, options.querySerializer.allowReserved);
   }
   let search = options.querySerializer(options.params.query ?? {});
   if (search.startsWith("?")) {
